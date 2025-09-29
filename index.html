@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drone vs Helipad — Interaktiv oversikt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root { --bg:#0b0f14; --card:#131a22; --muted:#9fb0c3; --accent:#5ec3ff; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b0f14;color:#eaf2fb}
+    header{position:sticky;top:0;z-index:1000;background:linear-gradient(180deg,#0b0f14 0%, rgba(11,15,20,.6) 100%);backdrop-filter:saturate(120%) blur(6px);border-bottom:1px solid #1e2936}
+    .wrap{max-width:1200px;margin:0 auto;padding:14px 18px}
+    h1{margin:0;font-size:20px;letter-spacing:.2px}
+    .sub{color:var(--muted);font-size:12px}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:14px;max-width:1200px;margin:12px auto;padding:0 18px}
+    .card{background:var(--card);border:1px solid #1e2936;border-radius:14px}
+    .card h2{margin:0;padding:14px 14px 8px;font-size:16px;border-bottom:1px solid #1e2936}
+    .card .body{padding:12px 14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    label{font-size:12px;color:var(--muted)}
+    input[type=file], select, button, input[type=number], input[type=date]{background:#0f1620;color:#eaf2fb;border:1px solid #273547;border-radius:10px;padding:8px 10px;font-size:13px}
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#1a90ff,#167ae6);border-color:#167ae6}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px;color:#cfe6ff}
+    #map{height:600px;width:100%;border-radius:14px}
+    .legend{font-size:12px;color:#cfe6ff;display:flex;gap:12px;flex-wrap:wrap}
+    .legend .dot{width:10px;height:10px;border-radius:50%}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:8px;border-bottom:1px solid #213042}
+    th{color:#cfe6ff;text-align:left}
+    tr:hover{background:#0f1620}
+    .muted{color:var(--muted)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .chip{background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px}
+    .footer{max-width:1200px;margin:24px auto;color:var(--muted);font-size:12px;padding:0 18px}
+    .warn{color:#ffd27b}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Drone vs Helipad – Interaktiv oversikt</h1>
+      <div class="sub">Last opp POI (helipads/baser) og droneoperasjoner. Se heatmap, buffersoner og nøkkeltall. Klar for Vercel (statisk hosting).</div>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card" id="controls">
+      <h2>1) Data</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>POI CSV (kolonner: name,lat,lon)</label><br>
+            <input type="file" id="poiFile" accept=".csv" />
+          </div>
+          <div>
+            <label>Drone CSV (kolonner: lat,lon[,start])</label><br>
+            <input type="file" id="droneFile" accept=".csv" />
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip">Tips: bruk CSV-ene vi genererte: <em>helipad_drone_summary…</em> er for POI-navn; for droner bruk original eksport (HemsWX/Ninox).</span>
+        </div>
+      </div>
+
+      <h2>2) Parametre</h2>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label>Buffer (km)</label><br>
+            <input type="number" id="r1" value="1" step="0.5" style="width:80px"> 
+            <input type="number" id="r2" value="3" step="0.5" style="width:80px"> 
+            <input type="number" id="r3" value="5" step="0.5" style="width:80px">
+          </div>
+          <div>
+            <label>Dato fra</label><br>
+            <input type="date" id="dateFrom">
+          </div>
+          <div>
+            <label>Dato til</label><br>
+            <input type="date" id="dateTo">
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="runBtn">Kjør analyse</button>
+          <button id="exportCsvBtn">Eksporter tabell (CSV)</button>
+          <button id="exportPngBtn">Eksporter kart (PNG)</button>
+        </div>
+        <div class="legend" style="margin-top:10px">
+          <div><span class="dot" style="background:#ff5a5a"></span> Buffer 1</div>
+          <div><span class="dot" style="background:#ffb554"></span> Buffer 2</div>
+          <div><span class="dot" style="background:#ffe36e"></span> Buffer 3</div>
+          <div class="muted">• Grå punkter = droneflygninger • Marker = helipad/base • Heatmap viser tetthet</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Kart & Nøkkeltall</h2>
+      <div class="body">
+        <div id="map"></div>
+        <div class="row" style="margin-top:10px">
+          <span class="pill" id="poiCount">POI: –</span>
+          <span class="pill" id="droneCount">Dronepunkter: –</span>
+          <span class="pill" id="within5">≤5 km (alle POI): –</span>
+        </div>
+      </div>
+      <div class="body" style="padding-top:0">
+        <h3 style="margin:0 0 8px;font-size:15px">Oppsummering per POI</h3>
+        <div class="muted" style="margin-bottom:6px">Sorter ved å klikke på kolonneoverskrifter</div>
+        <div style="overflow:auto;max-height:320px;border:1px solid #213042;border-radius:10px">
+          <table id="summaryTable">
+            <thead>
+              <tr>
+                <th data-k="POI">POI</th>
+                <th data-k="z01">0–1 km</th>
+                <th data-k="z13">1–3 km</th>
+                <th data-k="z35">3–5 km</th>
+                <th data-k="sum">Sum ≤5 km</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">
+    ⚙️ Lokal behandling i nettleseren. Ingen data lastes opp. For Vercel: legg filen som <code>index.html</code> i repoet og deploy. 
+    <span class="warn">NB:</span> For svært store datasett kan første kjøring ta litt tid – bruk datofilter for å avlaste.
+  </div>
+
+  <!-- Libs -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // --- Map setup ---
+    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 4.8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+    let poi = [];        // {name, lat, lon}
+    let drones = [];     // {lat, lon, start?}
+
+    const poiLayer = L.layerGroup().addTo(map);
+    const bufferLayer = L.layerGroup().addTo(map);
+    const droneLayer = L.layerGroup().addTo(map);
+    const heatLayerGroup = L.layerGroup().addTo(map);
+
+    const poiCountEl = document.getElementById('poiCount');
+    const droneCountEl = document.getElementById('droneCount');
+    const within5El = document.getElementById('within5');
+
+    function parseDateSafe(s){
+      if(!s) return null;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2){
+      const R = 6371.0;
+      const toRad = x => x * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function drawMap(r1, r2, r3, dateFrom, dateTo){
+      poiLayer.clearLayers();
+      bufferLayer.clearLayers();
+      droneLayer.clearLayers();
+      heatLayerGroup.clearLayers();
+
+      // POIs + buffers
+      poi.forEach(p => {
+        L.marker([p.lat, p.lon], {title:p.name}).bindTooltip(p.name).addTo(poiLayer);
+        const colors = ['#ff5a5a','#ffb554','#ffe36e'];
+        [r1,r2,r3].forEach((r, idx) => {
+          if(!r) return;
+          L.circle([p.lat,p.lon], {radius:r*1000, color:colors[idx], fill:false, weight:1, opacity:.7}).addTo(bufferLayer);
+        });
+      });
+
+      // Filter drones by date window
+      let dFiltered = drones;
+      if(dateFrom || dateTo){
+        dFiltered = drones.filter(d => {
+          if(!d.start) return false; // If window chosen, require timestamp
+          if(dateFrom && d.start < dateFrom) return false;
+          if(dateTo && d.start > dateTo) return false;
+          return true;
+        });
+      }
+
+      // Draw drone points (cap to 40k for performance)
+      const maxPts = 40000;
+      const step = Math.ceil(dFiltered.length / maxPts);
+      const sample = step > 1 ? dFiltered.filter((_,i)=> i%step===0) : dFiltered;
+
+      sample.forEach(d => {
+        L.circleMarker([d.lat, d.lon], {radius:2, color:'#a8b6c9', opacity:.6, fillOpacity:.6}).addTo(droneLayer);
+      });
+
+      // Heatmap
+      const heatData = sample.map(d => [d.lat, d.lon, 0.5]);
+      if(heatData.length){
+        const heat = (L as any).heatLayer ? (L as any).heatLayer(heatData, {radius:18, blur:15}) : null;
+        if(heat) heat.addTo(heatLayerGroup);
+      }
+
+      // Key metrics: within 5 km of nearest POI (uses r3 if present else 5)
+      const lim = r3 || 5;
+      let within = 0;
+      for(const d of dFiltered){
+        let minD = Infinity;
+        for(const p of poi){
+          const dist = haversineKm(d.lat, d.lon, p.lat, p.lon);
+          if(dist < minD) minD = dist;
+          if(minD <= lim) break;
+        }
+        if(minD <= lim) within++;
+      }
+      poiCountEl.textContent = `POI: ${poi.length}`;
+      droneCountEl.textContent = `Dronepunkter: ${dFiltered.length.toLocaleString('no-NO')}`;
+      within5El.textContent = `≤${lim} km (alle POI): ${within.toLocaleString('no-NO')}`;
+
+      // Fit map if data present
+      const allLatLngs = [];
+      poi.forEach(p=> allLatLngs.push([p.lat,p.lon]));
+      sample.forEach(d=> allLatLngs.push([d.lat,d.lon]));
+      if(allLatLngs.length){
+        try{ map.fitBounds(allLatLngs, {padding:[30,30]}); }catch(e){}
+      }
+    }
+
+    // Build summary per POI
+    function buildSummary(r1, r2, r3, dateFrom, dateTo){
+      let dFiltered = drones;
+      if(dateFrom || dateTo){
+        dFiltered = drones.filter(d => {
+          if(!d.start) return false;
+          if(dateFrom && d.start < dateFrom) return false;
+          if(dateTo && d.start > dateTo) return false;
+          return true;
+        });
+      }
+      const rows = poi.map(p => ({ POI:p.name, z01:0, z13:0, z35:0, sum:0 }));
+      for(const d of dFiltered){
+        for(let i=0;i<poi.length;i++){
+          const p = poi[i];
+          const dist = haversineKm(d.lat,d.lon,p.lat,p.lon);
+          if(dist <= r1){ rows[i].z01++; rows[i].sum++; }
+          else if(dist <= r2){ rows[i].z13++; rows[i].sum++; }
+          else if(dist <= r3){ rows[i].z35++; rows[i].sum++; }
+        }
+      }
+      rows.sort((a,b)=> b.sum - a.sum);
+      return rows;
+    }
+
+    function renderSummaryTable(rows){
+      const tbody = document.querySelector('#summaryTable tbody');
+      tbody.innerHTML = '';
+      for(const r of rows){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.POI}</td><td>${r.z01}</td><td>${r.z13}</td><td>${r.z35}</td><td><b>${r.sum}</b></td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Sorting
+    let sortKey = 'sum'; let sortAsc = false;
+    document.querySelectorAll('#summaryTable th').forEach(th => {
+      th.addEventListener('click', () => {
+        const k = th.getAttribute('data-k');
+        if(!k) return;
+        if(sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = (k==='POI'); }
+        const rows = Array.from(document.querySelectorAll('#summaryTable tbody tr'));
+        rows.sort((a,b)=>{
+          const get = (tr, idx) => tr.children[idx].innerText;
+          const idxMap = { 'POI':0, 'z01':1, 'z13':2, 'z35':3, 'sum':4 };
+          const ia = idxMap[k], ib = idxMap[k];
+          const va = ia===0 ? get(a,ia) : Number(get(a,ia));
+          const vb = ib===0 ? get(b,ib) : Number(get(b,ib));
+          return sortAsc ? (va>vb?1:va<vb?-1:0) : (va<vb?1:va>vb?-1:0);
+        });
+        const tb = document.querySelector('#summaryTable tbody');
+        tb.innerHTML=''; rows.forEach(r=>tb.appendChild(r));
+      });
+    });
+
+    // Export CSV
+    document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+      const rows = [['POI','0-1 km','1-3 km','3-5 km','Sum ≤5 km']];
+      document.querySelectorAll('#summaryTable tbody tr').forEach(tr=>{
+        const tds = Array.from(tr.children).map(td=>td.innerText);
+        rows.push([tds[0], tds[1], tds[2], tds[3], tds[4]]);
+      });
+      const csv = rows.map(r=>r.join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'poi_summary.csv';
+      a.click();
+    });
+
+    // Export map to PNG (uses built-in canvas renderer snapshot)
+    document.getElementById('exportPngBtn').addEventListener('click', ()=>{
+      html2canvas(document.getElementById('map')).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'map.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+
+    // File parsing
+    function loadCsv(file){
+      return new Promise((resolve, reject)=>{
+        Papa.parse(file, {
+          header:true, skipEmptyLines:true, dynamicTyping:true,
+          complete: res => resolve(res.data), error: reject
+        });
+      });
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async ()=>{
+      const r1 = parseFloat((document.getElementById('r1')).value) || 1;
+      const r2 = parseFloat((document.getElementById('r2')).value) || 3;
+      const r3 = parseFloat((document.getElementById('r3')).value) || 5;
+      const df = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+      const dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
+
+      const poiFile = (document.getElementById('poiFile')).files[0];
+      const droneFile = (document.getElementById('droneFile')).files[0];
+
+      if(!poiFile || !droneFile){ alert('Last opp både POI- og drone-CSV.'); return; }
+
+      const [poiData, drData] = await Promise.all([loadCsv(poiFile), loadCsv(droneFile)]);
+
+      // Normalize POI
+      poi = poiData.map(r=>({
+        name: r.name || r.POI || r.Navn || r.navn || r.site || r.base || 'POI',
+        lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude),
+        lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng)
+      })).filter(p=> Number.isFinite(p.lat) && Number.isFinite(p.lon));
+
+      // Normalize Drones
+      drones = drData.map(r=>({
+        lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude),
+        lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng),
+        start: parseDateSafe(r.start ?? r.Fra ?? r.from ?? r.Start ?? r['start_time'] ?? r.timestamp)
+      })).filter(d=> Number.isFinite(d.lat) && Number.isFinite(d.lon));
+
+      drawMap(r1,r2,r3, df, dt);
+      const rows = buildSummary(r1,r2,r3, df, dt);
+      renderSummaryTable(rows);
+    });
+  </script>
+
+  <!-- html2canvas for PNG export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</body>
+</html>
