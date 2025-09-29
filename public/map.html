@@ -18,12 +18,24 @@
 <body>
   <div id="map"></div>
   <div class="pill" id="stats">Laster…</div>
+  <div class="pill" style="right:10px; left:auto" id="basemapToggle">Kart</div>
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 5);
     const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
     const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery' });
+    let currentBase = 'osm';
     baseOsm.addTo(map);
-    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri }, {}, { position: 'topleft' }).addTo(map);
+    const basemapToggle = document.getElementById('basemapToggle');
+    function updateToggleLabel(){ basemapToggle.textContent = currentBase === 'osm' ? 'Satellitt' : 'Kart'; }
+    updateToggleLabel();
+    basemapToggle.addEventListener('click', ()=>{
+      if(currentBase === 'osm'){
+        map.removeLayer(baseOsm); baseEsri.addTo(map); currentBase = 'esri';
+      } else {
+        map.removeLayer(baseEsri); baseOsm.addTo(map); currentBase = 'osm';
+      }
+      updateToggleLabel();
+    });
 
     const poiLayer = L.layerGroup().addTo(map);
     const droneLayer = L.layerGroup().addTo(map);
