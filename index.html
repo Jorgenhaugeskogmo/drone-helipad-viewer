@@ -38,6 +38,8 @@
     .chip{background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px}
     .footer{max-width:1200px;margin:24px auto;color:var(--muted);font-size:12px;padding:0 18px}
     .warn{color:#ffd27b}
+    /* Fullscreen adjustments for map */
+    #map:fullscreen, #map:-webkit-full-screen { height:100vh; width:100vw; border-radius:0 }
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr}
       #map{height:520px}
@@ -96,6 +98,8 @@
           <button class="primary" id="runBtn">Kjør analyse</button>
           <button id="exportCsvBtn">Eksporter tabell (CSV)</button>
           <button id="exportPngBtn">Eksporter kart (PNG)</button>
+          <button id="fullscreenBtn">Fullskjerm kart</button>
+          <button id="openNewTabBtn">Åpne kart i ny fane</button>
         </div>
         <div class="legend" style="margin-top:10px">
           <div><span class="dot" style="background:#ff5a5a"></span> Buffer 1</div>
@@ -309,6 +313,28 @@
         link.href = canvas.toDataURL();
         link.click();
       });
+    });
+
+    // Fullscreen toggle for map
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    function updateFsButton(){
+      fullscreenBtn.textContent = document.fullscreenElement ? 'Avslutt fullskjerm' : 'Fullskjerm kart';
+    }
+    document.addEventListener('fullscreenchange', updateFsButton);
+    fullscreenBtn.addEventListener('click', ()=>{
+      const el = document.getElementById('map');
+      if(!document.fullscreenElement){
+        (el.requestFullscreen && el.requestFullscreen()) || (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
+      } else {
+        (document.exitFullscreen && document.exitFullscreen()) || (document.webkitExitFullscreen && document.webkitExitFullscreen());
+      }
+    });
+    updateFsButton();
+
+    // Open map in new tab (standalone full-view)
+    const openNewTabBtn = document.getElementById('openNewTabBtn');
+    openNewTabBtn.addEventListener('click', ()=>{
+      window.open('/map.html', '_blank');
     });
 
     document.getElementById('runBtn').addEventListener('click', async ()=>{

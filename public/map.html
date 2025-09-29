@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drone vs Helipad — Kart (full visning)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body { height:100%; margin:0; background:#0b0f14; }
+    #map { position:fixed; inset:0; }
+    .pill { position:fixed; top:10px; left:10px; z-index:1000; background:#0f1620; border:1px solid #273547; border-radius:999px; padding:6px 10px; color:#cfe6ff; font-family:system-ui, sans-serif; font-size:12px }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="pill" id="stats">Laster…</div>
+  <script>
+    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+    const poiLayer = L.layerGroup().addTo(map);
+    const droneLayer = L.layerGroup().addTo(map);
+    const heatLayerGroup = L.layerGroup().addTo(map);
+    const statsEl = document.getElementById('stats');
+
+    function parseDateSafe(s){ if(!s) return null; const d=new Date(s); return isNaN(d.getTime())?null:d; }
+
+    async function loadCsvFromUrl(url){
+      const res = await fetch(url);
+      const txt = await res.text();
+      return new Promise((resolve)=>{
+        Papa.parse(txt, { header:true, skipEmptyLines:true, dynamicTyping:true, complete: r => resolve(r.data) });
+      });
+    }
+
+    (async function(){
+      const [poiData, drData] = await Promise.all([
+        loadCsvFromUrl('/data/poi.csv'),
+        loadCsvFromUrl('/data/drone_ops.csv')
+      ]);
+
+      const poi = poiData.map(r=>({ name: r.name || r.POI || r.Navn || r.navn || r.site || r.base || 'POI', lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng) })).filter(p=> Number.isFinite(p.lat) && Number.isFinite(p.lon));
+      const drones = drData.map(r=>({ lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng), start: parseDateSafe(r.start ?? r.Fra ?? r.from ?? r.Start ?? r['start_time'] ?? r.timestamp) })).filter(d=> Number.isFinite(d.lat) && Number.isFinite(d.lon));
+
+      poi.forEach(p => { L.marker([p.lat, p.lon], {title:p.name}).bindTooltip(p.name).addTo(poiLayer); });
+
+      const maxPts = 40000; const step = Math.ceil(drones.length / maxPts);
+      const sample = step > 1 ? drones.filter((_,i)=> i%step===0) : drones;
+      sample.forEach(d => { L.circleMarker([d.lat, d.lon], {radius:2, color:'#a8b6c9', opacity:.6, fillOpacity:.6}).addTo(droneLayer); });
+      const heatData = sample.map(d => [d.lat, d.lon, 0.5]);
+      if(heatData.length){ L.heatLayer(heatData, {radius:18, blur:15}).addTo(heatLayerGroup); }
+
+      const allLatLngs = [];
+      poi.forEach(p=> allLatLngs.push([p.lat,p.lon]));
+      sample.forEach(d=> allLatLngs.push([d.lat,d.lon]));
+      if(allLatLngs.length){ try{ map.fitBounds(allLatLngs, {padding:[30,30]}); }catch(e){}
+      }
+
+      statsEl.textContent = `POI: ${poi.length} • Dronepunkter: ${drones.length.toLocaleString('no-NO')}`;
+    })();
+  </script>
+</body>
+<\/html>
+
