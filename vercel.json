@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/data/(.*)", "destination": "/public/data/$1" }
-  ]
-}
-
