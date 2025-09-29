@@ -31,7 +31,7 @@
     button{cursor:pointer}
     button.primary{background:linear-gradient(180deg,#1a90ff,#167ae6);border-color:#167ae6}
     .pill{display:inline-flex;gap:8px;align-items:center;background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px;color:#cfe6ff}
-    #map{height:600px;width:100%;border-radius:14px}
+    #map{height:760px;width:100%;border-radius:14px}
     .legend{font-size:12px;color:#cfe6ff;display:flex;gap:12px;flex-wrap:wrap}
     .legend .dot{width:10px;height:10px;border-radius:50%}
     table{width:100%;border-collapse:collapse;font-size:13px}
@@ -47,8 +47,8 @@
     #map:fullscreen, #map:-webkit-full-screen { height:100vh; width:100vw; border-radius:0 }
     /* Ops list as separate box beside map */
     .map-row{display:flex;gap:12px;align-items:stretch}
-    .map-row #map{flex:1}
-    .ops-box{width:320px;max-height:600px;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:14px}
+    .map-row #map{flex:1 1 0%; width:auto; min-width:0}
+    .ops-box{width:320px;max-height:760px;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:14px}
     .ops-box .ops-head{position:sticky;top:0;background:#0f1620;border-bottom:1px solid #273547;border-top-left-radius:14px;border-top-right-radius:14px;padding:10px 12px;font-size:12px;color:#cfe6ff;display:flex;justify-content:space-between;align-items:center}
     .ops-box .ops-list{padding:10px 10px}
     .ops-item{padding:8px;border:1px solid #1e2936;border-radius:10px;margin-bottom:8px;background:#0b1420}
@@ -132,8 +132,8 @@
       <h2>Kart & Nøkkeltall</h2>
       <div class="body">
         <div class="map-row">
-          <div id="map"></div>
-          <section class="ops-box" id="opsPanel" style="display:none">
+          <div id="map" style="order:1"></div>
+          <section class="ops-box" id="opsPanel" style="display:none; order:2">
             <div class="ops-head"><span>Droneoperasjoner i utsnitt</span><span class="muted" id="opsCount">0</span></div>
             <div class="ops-list" id="opsList"></div>
           </section>
@@ -176,7 +176,10 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 4.8);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery' });
+    baseOsm.addTo(map);
+    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri }, {}, { position: 'topleft' }).addTo(map);
 
     let poi = [];
     let drones = [];

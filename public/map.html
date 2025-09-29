@@ -20,7 +20,10 @@
   <div class="pill" id="stats">Laster…</div>
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery' });
+    baseOsm.addTo(map);
+    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri }, {}, { position: 'topleft' }).addTo(map);
 
     const poiLayer = L.layerGroup().addTo(map);
     const droneLayer = L.layerGroup().addTo(map);
