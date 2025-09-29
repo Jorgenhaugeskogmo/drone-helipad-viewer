@@ -45,12 +45,13 @@
     .warn{color:#ffd27b}
     /* Fullscreen adjustments for map */
     #map:fullscreen, #map:-webkit-full-screen { height:100vh; width:100vw; border-radius:0 }
-    /* Ops panel to the right of map */
-    .map-wrap{position:relative}
-    .ops-panel{position:absolute;top:10px;right:10px;width:280px;max-height:70%;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:12px;box-shadow:0 6px 30px rgba(0,0,0,.35);z-index:1001}
-    .ops-panel .ops-head{position:sticky;top:0;background:#0f1620;border-bottom:1px solid #273547;border-top-left-radius:12px;border-top-right-radius:12px;padding:8px 10px;font-size:12px;color:#cfe6ff;z-index:1;display:flex;justify-content:space-between;align-items:center}
-    .ops-panel .ops-list{padding:6px 8px}
-    .ops-item{padding:6px 6px;border:1px solid #1e2936;border-radius:8px;margin-bottom:6px;background:#0b1420}
+    /* Ops list as separate box beside map */
+    .map-row{display:flex;gap:12px;align-items:stretch}
+    .map-row #map{flex:1}
+    .ops-box{width:320px;max-height:600px;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:14px}
+    .ops-box .ops-head{position:sticky;top:0;background:#0f1620;border-bottom:1px solid #273547;border-top-left-radius:14px;border-top-right-radius:14px;padding:10px 12px;font-size:12px;color:#cfe6ff;display:flex;justify-content:space-between;align-items:center}
+    .ops-box .ops-list{padding:10px 10px}
+    .ops-item{padding:8px;border:1px solid #1e2936;border-radius:10px;margin-bottom:8px;background:#0b1420}
     .ops-item small{color:#9fb0c3}
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr}
@@ -130,12 +131,12 @@
     <section class="card">
       <h2>Kart & Nøkkeltall</h2>
       <div class="body">
-        <div class="map-wrap">
+        <div class="map-row">
           <div id="map"></div>
-          <div class="ops-panel leaflet-top leaflet-right" id="opsPanel" style="display:none">
+          <section class="ops-box" id="opsPanel" style="display:none">
             <div class="ops-head"><span>Droneoperasjoner i utsnitt</span><span class="muted" id="opsCount">0</span></div>
             <div class="ops-list" id="opsList"></div>
-          </div>
+          </section>
         </div>
         <div class="row" style="margin-top:10px">
           <span class="pill" id="poiCount">POI: –</span>
