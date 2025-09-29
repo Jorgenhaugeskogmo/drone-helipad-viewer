@@ -38,6 +38,8 @@
     .chip{background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px}
     .footer{max-width:1200px;margin:24px auto;color:var(--muted);font-size:12px;padding:0 18px}
     .warn{color:#ffd27b}
+    /* Fullscreen adjustments for map */
+    #map:fullscreen, #map:-webkit-full-screen { height:100vh; width:100vw; border-radius:0 }
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr}
       #map{height:520px}
@@ -96,6 +98,13 @@
           <button class="primary" id="runBtn">Kjør analyse</button>
           <button id="exportCsvBtn">Eksporter tabell (CSV)</button>
           <button id="exportPngBtn">Eksporter kart (PNG)</button>
+          <button id="fullscreenBtn">Fullskjerm kart</button>
+          <button id="openNewTabBtn">Åpne kart i ny fane</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label>Heatmap opasitet</label>
+          <input type="range" id="heatOpacity" min="0" max="1" step="0.05" value="0.35" style="width:180px">
+          <span class="pill" id="heatOpacityVal">0.35</span>
         </div>
         <div class="legend" style="margin-top:10px">
           <div><span class="dot" style="background:#ff5a5a"></span> Buffer 1</div>
@@ -152,6 +161,7 @@
 
     let poi = [];
     let drones = [];
+    let heatMinOpacity = 0.35;
 
     const poiLayer = L.layerGroup().addTo(map);
     const bufferLayer = L.layerGroup().addTo(map);
@@ -211,9 +221,9 @@
         L.circleMarker([d.lat, d.lon], {radius:2, color:'#a8b6c9', opacity:.6, fillOpacity:.6}).addTo(droneLayer);
       });
 
-      const heatData = sample.map(d => [d.lat, d.lon, 0.5]);
+      const heatData = sample.map(d => [d.lat, d.lon, 0.9]);
       if(heatData.length){
-        const heat = L.heatLayer(heatData, {radius:18, blur:15});
+        const heat = L.heatLayer(heatData, {radius:22, blur:12, minOpacity:heatMinOpacity});
         heat.addTo(heatLayerGroup);
       }
 
@@ -309,6 +319,48 @@
         link.href = canvas.toDataURL();
         link.click();
       });
+    });
+
+    // Opacity slider
+    const heatOpacityInput = document.getElementById('heatOpacity');
+    const heatOpacityVal = document.getElementById('heatOpacityVal');
+    function refreshMapOnly(){
+      const r1 = parseFloat((document.getElementById('r1')).value) || 1;
+      const r2 = parseFloat((document.getElementById('r2')).value) || 3;
+      const r3 = parseFloat((document.getElementById('r3')).value) || 5;
+      const df = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+      const dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
+      drawMap(r1, r2, r3, df, dt);
+    }
+    if(heatOpacityInput){
+      heatOpacityVal.textContent = Number(heatOpacityInput.value).toFixed(2);
+      heatOpacityInput.addEventListener('input', (e)=>{
+        heatMinOpacity = Number(e.target.value);
+        heatOpacityVal.textContent = heatMinOpacity.toFixed(2);
+        refreshMapOnly();
+      });
+    }
+
+    // Fullscreen toggle for map
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    function updateFsButton(){
+      fullscreenBtn.textContent = document.fullscreenElement ? 'Avslutt fullskjerm' : 'Fullskjerm kart';
+    }
+    document.addEventListener('fullscreenchange', updateFsButton);
+    fullscreenBtn.addEventListener('click', ()=>{
+      const el = document.getElementById('map');
+      if(!document.fullscreenElement){
+        (el.requestFullscreen && el.requestFullscreen()) || (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
+      } else {
+        (document.exitFullscreen && document.exitFullscreen()) || (document.webkitExitFullscreen && document.webkitExitFullscreen());
+      }
+    });
+    updateFsButton();
+
+    // Open map in new tab (standalone full-view)
+    const openNewTabBtn = document.getElementById('openNewTabBtn');
+    openNewTabBtn.addEventListener('click', ()=>{
+      window.open('/map.html', '_blank');
     });
 
     document.getElementById('runBtn').addEventListener('click', async ()=>{

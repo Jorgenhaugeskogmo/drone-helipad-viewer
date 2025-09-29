@@ -101,6 +101,11 @@
           <button id="fullscreenBtn">Fullskjerm kart</button>
           <button id="openNewTabBtn">Åpne kart i ny fane</button>
         </div>
+        <div class="row" style="margin-top:8px">
+          <label>Heatmap opasitet</label>
+          <input type="range" id="heatOpacity" min="0" max="1" step="0.05" value="0.35" style="width:180px">
+          <span class="pill" id="heatOpacityVal">0.35</span>
+        </div>
         <div class="legend" style="margin-top:10px">
           <div><span class="dot" style="background:#ff5a5a"></span> Buffer 1</div>
           <div><span class="dot" style="background:#ffb554"></span> Buffer 2</div>
@@ -156,6 +161,7 @@
 
     let poi = [];
     let drones = [];
+    let heatMinOpacity = 0.35;
 
     const poiLayer = L.layerGroup().addTo(map);
     const bufferLayer = L.layerGroup().addTo(map);
@@ -217,7 +223,7 @@
 
       const heatData = sample.map(d => [d.lat, d.lon, 0.9]);
       if(heatData.length){
-        const heat = L.heatLayer(heatData, {radius:22, blur:12, minOpacity:0.35});
+        const heat = L.heatLayer(heatData, {radius:22, blur:12, minOpacity:heatMinOpacity});
         heat.addTo(heatLayerGroup);
       }
 
@@ -314,6 +320,26 @@
         link.click();
       });
     });
+
+    // Opacity slider
+    const heatOpacityInput = document.getElementById('heatOpacity');
+    const heatOpacityVal = document.getElementById('heatOpacityVal');
+    function refreshMapOnly(){
+      const r1 = parseFloat((document.getElementById('r1')).value) || 1;
+      const r2 = parseFloat((document.getElementById('r2')).value) || 3;
+      const r3 = parseFloat((document.getElementById('r3')).value) || 5;
+      const df = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+      const dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
+      drawMap(r1, r2, r3, df, dt);
+    }
+    if(heatOpacityInput){
+      heatOpacityVal.textContent = Number(heatOpacityInput.value).toFixed(2);
+      heatOpacityInput.addEventListener('input', (e)=>{
+        heatMinOpacity = Number(e.target.value);
+        heatOpacityVal.textContent = heatMinOpacity.toFixed(2);
+        refreshMapOnly();
+      });
+    }
 
     // Fullscreen toggle for map
     const fullscreenBtn = document.getElementById('fullscreenBtn');
