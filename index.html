@@ -215,9 +215,9 @@
         L.circleMarker([d.lat, d.lon], {radius:2, color:'#a8b6c9', opacity:.6, fillOpacity:.6}).addTo(droneLayer);
       });
 
-      const heatData = sample.map(d => [d.lat, d.lon, 0.5]);
+      const heatData = sample.map(d => [d.lat, d.lon, 0.9]);
       if(heatData.length){
-        const heat = L.heatLayer(heatData, {radius:18, blur:15});
+        const heat = L.heatLayer(heatData, {radius:22, blur:12, minOpacity:0.35});
         heat.addTo(heatLayerGroup);
       }
 

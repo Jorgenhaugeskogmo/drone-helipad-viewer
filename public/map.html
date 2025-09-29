@@ -51,8 +51,8 @@
       const maxPts = 40000; const step = Math.ceil(drones.length / maxPts);
       const sample = step > 1 ? drones.filter((_,i)=> i%step===0) : drones;
       sample.forEach(d => { L.circleMarker([d.lat, d.lon], {radius:2, color:'#a8b6c9', opacity:.6, fillOpacity:.6}).addTo(droneLayer); });
-      const heatData = sample.map(d => [d.lat, d.lon, 0.5]);
-      if(heatData.length){ L.heatLayer(heatData, {radius:18, blur:15}).addTo(heatLayerGroup); }
+      const heatData = sample.map(d => [d.lat, d.lon, 0.9]);
+      if(heatData.length){ L.heatLayer(heatData, {radius:22, blur:12, minOpacity:0.35}).addTo(heatLayerGroup); }
 
       const allLatLngs = [];
       poi.forEach(p=> allLatLngs.push([p.lat,p.lon]));
