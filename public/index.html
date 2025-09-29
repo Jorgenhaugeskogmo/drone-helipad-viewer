@@ -168,6 +168,17 @@
     let drones = [];
     let heatMinOpacity = 0.35;
 
+    // Viewport summary control (top-right)
+    const viewportSummaryControl = L.control({ position: 'topright' });
+    viewportSummaryControl.onAdd = function(){
+      const div = L.DomUtil.create('div', 'pill');
+      div.id = 'viewportSummary';
+      div.style.pointerEvents = 'none';
+      div.textContent = 'Utsnitt: –';
+      return div;
+    };
+    viewportSummaryControl.addTo(map);
+
     const poiLayer = L.layerGroup().addTo(map);
     const bufferLayer = L.layerGroup().addTo(map);
     const droneLayer = L.layerGroup().addTo(map);
@@ -253,6 +264,9 @@
       if(allLatLngs.length){
         try{ map.fitBounds(allLatLngs, {padding:[30,30]}); }catch(e){}
       }
+
+      // Update viewport summary after drawing
+      updateViewportSummary(dateFrom, dateTo);
     }
 
     function buildSummary(r1, r2, r3, dateFrom, dateTo){
@@ -287,6 +301,41 @@
         tr.innerHTML = `<td>${r.POI}</td><td>${r.z01}</td><td>${r.z13}</td><td>${r.z35}</td><td><b>${r.sum}</b></td>`;
         tbody.appendChild(tr);
       }
+    }
+
+    function updateViewportSummary(dateFrom, dateTo){
+      const el = document.getElementById('viewportSummary');
+      if(!el) return;
+      // Determine viewport bounds
+      const b = map.getBounds();
+      const inView = drones.filter(d => b.contains([d.lat, d.lon]));
+
+      // Date filter context
+      let df = dateFrom, dt = dateTo;
+      // If not provided (e.g., initial draw), try read from inputs
+      if(!df && !dt){
+        df = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+        dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
+      }
+      const inViewDate = (df || dt) ? inView.filter(d => {
+        if(!d.start) return false;
+        if(df && d.start < df) return false;
+        if(dt && d.start > dt) return false;
+        return true;
+      }) : inView;
+
+      // Zoom-based granularity label
+      const z = map.getZoom();
+      const gran = z >= 12 ? 'kvartal' : z >= 9 ? 'bydel' : z >= 7 ? 'region' : 'nasjonalt';
+
+      // Date reference label
+      let dateLbl = '';
+      if(df && dt) dateLbl = `${df.toISOString().slice(0,10)} → ${dt.toISOString().slice(0,10)}`;
+      else if(df) dateLbl = `fra ${df.toISOString().slice(0,10)}`;
+      else if(dt) dateLbl = `til ${dt.toISOString().slice(0,10)}`;
+      else dateLbl = 'alle datoer';
+
+      el.textContent = `Utsnitt (${gran}): ${inViewDate.length.toLocaleString('no-NO')} punkter • ${dateLbl}`;
     }
 
     function loadCsv(file){
@@ -401,6 +450,9 @@
 
     // Auto-run with built-in data on first load
     window.addEventListener('load', ()=> document.getElementById('runBtn').click());
+
+    // Update viewport summary on pan/zoom
+    map.on('moveend zoomend', ()=> updateViewportSummary());
   </script>
 </body>
 </html>
