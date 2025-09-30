@@ -278,10 +278,21 @@
     baseOsm.addTo(map);
     L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
     
-    // Initialize map screenshoter for high-quality PNG export
-    const screenshoter = new SimpleMapScreenshoter({
-      hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
-    }).addTo(map);
+    // Initialize map screenshoter for high-quality PNG export (try-catch for compatibility)
+    let screenshoter;
+    try {
+      screenshoter = new SimpleMapScreenshoter({
+        hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
+      }).addTo(map);
+    } catch(e) {
+      console.warn('SimpleMapScreenshoter not available:', e);
+    }
+    
+    // Map layers (must be after map is created)
+    const poiLayer = L.layerGroup().addTo(map);
+    const bufferLayer = L.layerGroup().addTo(map);
+    const droneLayer = L.layerGroup().addTo(map);
+    const heatLayerGroup = L.layerGroup().addTo(map);
 
     // Viewport summary control (top-right)
     const viewportSummaryControl = L.control({ position: 'topright' });
@@ -293,11 +304,6 @@
       return div;
     };
     viewportSummaryControl.addTo(map);
-
-    const poiLayer = L.layerGroup().addTo(map);
-    const bufferLayer = L.layerGroup().addTo(map);
-    const droneLayer = L.layerGroup().addTo(map);
-    const heatLayerGroup = L.layerGroup().addTo(map);
 
     const poiCountEl = document.getElementById('poiCount');
     const droneCountEl = document.getElementById('droneCount');
@@ -526,6 +532,10 @@
     });
 
     document.getElementById('exportPngBtn').addEventListener('click', async ()=>{
+      if (!screenshoter) {
+        alert('PNG-eksport er ikke tilgjengelig. Vennligst refresh siden.');
+        return;
+      }
       try {
         const format = 'png';
         const overridedPluginOptions = {
