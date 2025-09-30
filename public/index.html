@@ -140,15 +140,15 @@
         </div>
         <div class="row" style="margin-top:8px">
           <label>Heatmap opasitet</label>
-          <input type="range" id="heatOpacity" min="0" max="1" step="0.05" value="0.35" style="width:180px">
-          <span class="pill" id="heatOpacityVal">0.35</span>
+          <input type="range" id="heatOpacity" min="0" max="1" step="0.05" value="0.10" style="width:180px">
+          <span class="pill" id="heatOpacityVal">0.10</span>
         </div>
       <div class="row" style="margin-top:8px">
         <label>Kartlag</label>
         <select id="basemapSelect">
           <option value="osm">Kart (OSM)</option>
           <option value="esri">Satellitt (Esri)</option>
-          <option value="eox">Satellitt (EOX)</option>
+          <option value="eox" selected>Satellitt (EOX)</option>
         </select>
       </div>
         <div class="legend" style="margin-top:10px">
@@ -210,7 +210,7 @@
     // Global variables
     let poi = [];
     let drones = [];
-    let heatMinOpacity = 0.35;
+    let heatMinOpacity = 0.10;
     
     // Password protection - using SHA-256 hash for security
     // To generate a new hash, open browser console and run: 
@@ -274,8 +274,8 @@
     const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
     const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
     const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
-    let currentBase = 'osm';
-    baseOsm.addTo(map);
+    let currentBase = 'eox';
+    baseEOX.addTo(map);
     L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
     
     // Initialize map screenshoter for high-quality PNG export (try-catch for compatibility)
@@ -686,8 +686,8 @@
         r3: params.get('r3') ? parseFloat(params.get('r3')) : 5,
         dateFrom: params.get('dateFrom') || '',
         dateTo: params.get('dateTo') || '',
-        heatOpacity: params.get('heatOpacity') ? parseFloat(params.get('heatOpacity')) : 0.35,
-        basemap: params.get('basemap') || 'osm',
+        heatOpacity: params.get('heatOpacity') ? parseFloat(params.get('heatOpacity')) : 0.10,
+        basemap: params.get('basemap') || 'eox',
         lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
         lon: params.get('lon') ? parseFloat(params.get('lon')) : null,
         zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null
@@ -711,8 +711,8 @@
       if(r3 != '5') params.set('r3', r3);
       if(dateFrom) params.set('dateFrom', dateFrom);
       if(dateTo) params.set('dateTo', dateTo);
-      if(heatOp != '0.35') params.set('heatOpacity', heatOp);
-      if(basemap != 'osm') params.set('basemap', basemap);
+      if(heatOp != '0.10') params.set('heatOpacity', heatOp);
+      if(basemap != 'eox') params.set('basemap', basemap);
       params.set('lat', center.lat.toFixed(4));
       params.set('lon', center.lng.toFixed(4));
       params.set('zoom', zoom);
@@ -733,11 +733,11 @@
     heatMinOpacity = urlParams.heatOpacity;
     document.getElementById('basemapSelect').value = urlParams.basemap;
     
-    // Apply basemap from URL
-    if(urlParams.basemap !== 'osm'){
+    // Apply basemap from URL (only if different from default 'eox')
+    if(urlParams.basemap !== 'eox'){
       [baseOsm, baseEsri, baseEOX].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
-      if(urlParams.basemap === 'esri'){ baseEsri.addTo(map); currentBase = 'esri'; }
-      else if(urlParams.basemap === 'eox'){ baseEOX.addTo(map); currentBase = 'eox'; }
+      if(urlParams.basemap === 'osm'){ baseOsm.addTo(map); currentBase = 'osm'; }
+      else if(urlParams.basemap === 'esri'){ baseEsri.addTo(map); currentBase = 'esri'; }
     }
     
     // Apply map position from URL (only if valid Norway-ish coordinates)
