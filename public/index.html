@@ -16,7 +16,8 @@
     .wrap{max-width:1200px;margin:0 auto;padding:14px 18px}
     h1{margin:0;font-size:20px;letter-spacing:.2px}
     .sub{color:var(--muted);font-size:12px}
-    .grid{display:grid;grid-template-columns:360px 1fr;gap:14px;max-width:1200px;margin:12px auto;padding:0 18px}
+    .grid{display:grid;grid-template-columns:320px 1fr;gap:14px;max-width:1400px;margin:12px auto;padding:0 18px}
+    .grid.collapsed{grid-template-columns:48px 1fr}
     .card{background:var(--card);border:1px solid #1e2936;border-radius:14px}
     .card h2{margin:0;padding:14px 14px 8px;font-size:16px;border-bottom:1px solid #1e2936}
     .card .body{padding:12px 14px}
@@ -31,7 +32,7 @@
     button{cursor:pointer}
     button.primary{background:linear-gradient(180deg,#1a90ff,#167ae6);border-color:#167ae6}
     .pill{display:inline-flex;gap:8px;align-items:center;background:#0f1620;border:1px solid #273547;border-radius:999px;padding:6px 10px;font-size:12px;color:#cfe6ff}
-    #map{height:600px;width:100%;border-radius:14px}
+    #map{height:760px;width:100%;border-radius:14px}
     .legend{font-size:12px;color:#cfe6ff;display:flex;gap:12px;flex-wrap:wrap}
     .legend .dot{width:10px;height:10px;border-radius:50%}
     table{width:100%;border-collapse:collapse;font-size:13px}
@@ -47,14 +48,19 @@
     #map:fullscreen, #map:-webkit-full-screen { height:100vh; width:100vw; border-radius:0 }
     /* Ops list as separate box beside map */
     .map-row{display:flex;gap:12px;align-items:stretch}
-    .map-row #map{flex:1}
-    .ops-box{width:320px;max-height:600px;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:14px}
+    .map-row #map{flex:1 1 0%; width:auto; min-width:0}
+    .ops-box{width:320px;max-height:760px;overflow:auto;background:#0f1620;border:1px solid #273547;border-radius:14px}
     .ops-box .ops-head{position:sticky;top:0;background:#0f1620;border-bottom:1px solid #273547;border-top-left-radius:14px;border-top-right-radius:14px;padding:10px 12px;font-size:12px;color:#cfe6ff;display:flex;justify-content:space-between;align-items:center}
     .ops-box .ops-list{padding:10px 10px}
     .ops-item{padding:8px;border:1px solid #1e2936;border-radius:10px;margin-bottom:8px;background:#0b1420}
     .ops-item small{color:#9fb0c3}
+    #controls.collapsed .body{display:none}
+    #controls.collapsed h2{writing-mode:vertical-rl;text-orientation:mixed;padding:14px 8px;border:none;cursor:pointer;user-select:none}
+    #collapseBtn{position:absolute;top:8px;right:8px;background:transparent;border:1px solid #273547;color:#9fb0c3;padding:4px 8px;font-size:11px;border-radius:6px;cursor:pointer}
+    #collapseBtn:hover{background:#0f1620;color:#cfe6ff}
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr}
+      .grid.collapsed{grid-template-columns:1fr}
       #map{height:520px}
     }
   </style>
@@ -67,8 +73,9 @@
     </div>
   </header>
 
-  <main class="grid">
-    <section class="card" id="controls">
+  <main class="grid" id="mainGrid">
+    <section class="card" id="controls" style="position:relative">
+      <button id="collapseBtn" title="Skjul/vis panel">◀</button>
       <h2>1) Data</h2>
       <div class="body">
         <div class="row">
@@ -119,6 +126,14 @@
           <input type="range" id="heatOpacity" min="0" max="1" step="0.05" value="0.35" style="width:180px">
           <span class="pill" id="heatOpacityVal">0.35</span>
         </div>
+      <div class="row" style="margin-top:8px">
+        <label>Kartlag</label>
+        <select id="basemapSelect">
+          <option value="osm">Kart (OSM)</option>
+          <option value="esri">Satellitt (Esri)</option>
+          <option value="eox">Satellitt (EOX)</option>
+        </select>
+      </div>
         <div class="legend" style="margin-top:10px">
           <div><span class="dot" style="background:#ff5a5a"></span> Buffer 1</div>
           <div><span class="dot" style="background:#ffb554"></span> Buffer 2</div>
@@ -132,8 +147,8 @@
       <h2>Kart & Nøkkeltall</h2>
       <div class="body">
         <div class="map-row">
-          <div id="map"></div>
-          <section class="ops-box" id="opsPanel" style="display:none">
+          <div id="map" style="order:1"></div>
+          <section class="ops-box" id="opsPanel" style="display:none; order:2">
             <div class="ops-head"><span>Droneoperasjoner i utsnitt</span><span class="muted" id="opsCount">0</span></div>
             <div class="ops-list" id="opsList"></div>
           </section>
@@ -175,8 +190,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
-    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([64.9, 13.2], 4.8);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
+    const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
+    const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
+    let currentBase = 'osm';
+    baseOsm.addTo(map);
+    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
 
     let poi = [];
     let drones = [];
@@ -388,11 +408,26 @@
     }
 
     async function loadCsvFromUrl(url){
-      const res = await fetch(url);
-      const txt = await res.text();
-      return new Promise((resolve)=>{
-        Papa.parse(txt, { header:true, skipEmptyLines:true, dynamicTyping:true, complete: r => resolve(r.data) });
-      });
+      try {
+        console.log('Laster CSV fra:', url);
+        const res = await fetch(url);
+        if(!res.ok) {
+          console.error('Feil ved lasting av CSV:', res.status, res.statusText);
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const txt = await res.text();
+        console.log('CSV lastet, størrelse:', txt.length, 'bytes');
+        return new Promise((resolve)=>{
+          Papa.parse(txt, { header:true, skipEmptyLines:true, dynamicTyping:true, complete: r => {
+            console.log('CSV parsed, rader:', r.data.length);
+            resolve(r.data);
+          }});
+        });
+      } catch(err) {
+        console.error('Kritisk feil ved lasting av CSV:', err);
+        alert('Kunne ikke laste datafiler. Sjekk console for detaljer.');
+        throw err;
+      }
     }
 
     document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
@@ -438,6 +473,25 @@
       });
     }
 
+    // Basemap select
+    const basemapSelect = document.getElementById('basemapSelect');
+    if(basemapSelect){
+      basemapSelect.addEventListener('change', (e)=>{
+        const v = e.target.value;
+        // remove others
+        [baseOsm, baseEsri, baseEOX].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+        if(v === 'osm'){
+          baseOsm.addTo(map); currentBase = 'osm';
+        } else if(v === 'esri'){
+          // try esri, fallback to eox on error
+          baseEsri.addTo(map); currentBase = 'esri';
+          baseEsri.once('tileerror', ()=>{ [baseEsri].forEach(l=> map.removeLayer(l)); baseEOX.addTo(map); currentBase = 'eox'; basemapSelect.value = 'eox'; });
+        } else if(v === 'eox'){
+          baseEOX.addTo(map); currentBase = 'eox';
+        }
+      });
+    }
+
     // Fullscreen toggle for map
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     function updateFsButton(){
@@ -461,6 +515,7 @@
     });
 
     document.getElementById('runBtn').addEventListener('click', async ()=>{
+      console.log('Kjør analyse-knapp klikket');
       const r1 = parseFloat((document.getElementById('r1')).value) || 1;
       const r2 = parseFloat((document.getElementById('r2')).value) || 3;
       const r3 = parseFloat((document.getElementById('r3')).value) || 5;
@@ -468,13 +523,16 @@
       const dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
 
       const useBuiltIn = (document.getElementById('useBuiltIn')).checked;
+      console.log('Bruk innebygde filer:', useBuiltIn);
       let poiData, drData;
 
       if(useBuiltIn){
+        console.log('Laster innebygde datafiler...');
         [poiData, drData] = await Promise.all([
           loadCsvFromUrl('/data/poi.csv'),
           loadCsvFromUrl('/data/drone_ops.csv')
         ]);
+        console.log('Datafiler lastet. POI:', poiData.length, 'Drone:', drData.length);
       } else {
         const poiFile = (document.getElementById('poiFile')).files[0];
         const droneFile = (document.getElementById('droneFile')).files[0];
@@ -491,11 +549,116 @@
       renderSummaryTable(rows);
     });
 
+    // Collapse toggle
+    const collapseBtn = document.getElementById('collapseBtn');
+    const controlsPanel = document.getElementById('controls');
+    const mainGrid = document.getElementById('mainGrid');
+    let isCollapsed = false;
+    collapseBtn.addEventListener('click', ()=>{
+      isCollapsed = !isCollapsed;
+      if(isCollapsed){
+        controlsPanel.classList.add('collapsed');
+        mainGrid.classList.add('collapsed');
+        collapseBtn.textContent = '▶';
+        collapseBtn.style.right = '50%';
+        collapseBtn.style.transform = 'translateX(50%)';
+      } else {
+        controlsPanel.classList.remove('collapsed');
+        mainGrid.classList.remove('collapsed');
+        collapseBtn.textContent = '◀';
+        collapseBtn.style.right = '8px';
+        collapseBtn.style.transform = 'none';
+      }
+      setTimeout(()=> map.invalidateSize(), 300);
+    });
+
+    // URL state management
+    function getUrlParams(){
+      const params = new URLSearchParams(window.location.search);
+      return {
+        r1: params.get('r1') ? parseFloat(params.get('r1')) : 1,
+        r2: params.get('r2') ? parseFloat(params.get('r2')) : 3,
+        r3: params.get('r3') ? parseFloat(params.get('r3')) : 5,
+        dateFrom: params.get('dateFrom') || '',
+        dateTo: params.get('dateTo') || '',
+        heatOpacity: params.get('heatOpacity') ? parseFloat(params.get('heatOpacity')) : 0.35,
+        basemap: params.get('basemap') || 'osm',
+        lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
+        lon: params.get('lon') ? parseFloat(params.get('lon')) : null,
+        zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null
+      };
+    }
+
+    function updateUrl(){
+      const params = new URLSearchParams();
+      const r1 = document.getElementById('r1').value;
+      const r2 = document.getElementById('r2').value;
+      const r3 = document.getElementById('r3').value;
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const heatOp = document.getElementById('heatOpacity').value;
+      const basemap = document.getElementById('basemapSelect').value;
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+
+      if(r1 != '1') params.set('r1', r1);
+      if(r2 != '3') params.set('r2', r2);
+      if(r3 != '5') params.set('r3', r3);
+      if(dateFrom) params.set('dateFrom', dateFrom);
+      if(dateTo) params.set('dateTo', dateTo);
+      if(heatOp != '0.35') params.set('heatOpacity', heatOp);
+      if(basemap != 'osm') params.set('basemap', basemap);
+      params.set('lat', center.lat.toFixed(4));
+      params.set('lon', center.lng.toFixed(4));
+      params.set('zoom', zoom);
+
+      const newUrl = window.location.pathname + '?' + params.toString();
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Load from URL on init
+    const urlParams = getUrlParams();
+    document.getElementById('r1').value = urlParams.r1;
+    document.getElementById('r2').value = urlParams.r2;
+    document.getElementById('r3').value = urlParams.r3;
+    document.getElementById('dateFrom').value = urlParams.dateFrom;
+    document.getElementById('dateTo').value = urlParams.dateTo;
+    document.getElementById('heatOpacity').value = urlParams.heatOpacity;
+    document.getElementById('heatOpacityVal').textContent = urlParams.heatOpacity.toFixed(2);
+    heatMinOpacity = urlParams.heatOpacity;
+    document.getElementById('basemapSelect').value = urlParams.basemap;
+    
+    // Apply basemap from URL
+    if(urlParams.basemap !== 'osm'){
+      [baseOsm, baseEsri, baseEOX].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+      if(urlParams.basemap === 'esri'){ baseEsri.addTo(map); currentBase = 'esri'; }
+      else if(urlParams.basemap === 'eox'){ baseEOX.addTo(map); currentBase = 'eox'; }
+    }
+    
+    // Apply map position from URL
+    if(urlParams.lat && urlParams.lon && urlParams.zoom){
+      map.setView([urlParams.lat, urlParams.lon], urlParams.zoom);
+    }
+
     // Auto-run with built-in data on first load
-    window.addEventListener('load', ()=> document.getElementById('runBtn').click());
+    window.addEventListener('load', ()=> {
+      document.getElementById('runBtn').click();
+      // Update URL after initial load
+      setTimeout(updateUrl, 500);
+    });
 
     // Update viewport summary on pan/zoom
-    map.on('moveend zoomend', ()=> updateViewportSummary());
+    map.on('moveend zoomend', ()=> {
+      updateViewportSummary();
+      updateUrl();
+    });
+
+    // Update URL when params change
+    ['r1','r2','r3','dateFrom','dateTo'].forEach(id => {
+      document.getElementById(id).addEventListener('change', updateUrl);
+    });
+    document.getElementById('heatOpacity').addEventListener('change', updateUrl);
+    document.getElementById('basemapSelect').addEventListener('change', updateUrl);
   </script>
 </body>
 </html>
