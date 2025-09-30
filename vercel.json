@@ -1,14 +1,8 @@
 {
-  "buildCommand": null,
+  "buildCommand": "mkdir -p data && cp -r public/data/* data/",
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [
-    {
-      "source": "/data/(.*)",
-      "destination": "/public/data/$1"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
