@@ -60,8 +60,8 @@
 
     (async function(){
       const [poiData, drData] = await Promise.all([
-        loadCsvFromUrl('../data/poi.csv'),
-        loadCsvFromUrl('../data/drone_ops.csv')
+        loadCsvFromUrl('/data/poi.csv'),
+        loadCsvFromUrl('/data/drone_ops.csv')
       ]);
 
       const poi = poiData.map(r=>({ name: r.name || r.POI || r.Navn || r.navn || r.site || r.base || 'POI', lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng) })).filter(p=> Number.isFinite(p.lat) && Number.isFinite(p.lon));

@@ -511,8 +511,8 @@
 
       if(useBuiltIn){
         [poiData, drData] = await Promise.all([
-          loadCsvFromUrl('./data/poi.csv'),
-          loadCsvFromUrl('./data/drone_ops.csv')
+          loadCsvFromUrl('/data/poi.csv'),
+          loadCsvFromUrl('/data/drone_ops.csv')
         ]);
       } else {
         const poiFile = (document.getElementById('poiFile')).files[0];
