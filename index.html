@@ -207,24 +207,35 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
   <script>
-    // Password protection
-    const CORRECT_PASSWORD = 'SlemDrone'; // ENDRE DETTE TIL DITT EGET PASSORD
+    // Password protection - using SHA-256 hash for security
+    // To generate a new hash, open browser console and run: 
+    // crypto.subtle.digest('SHA-256', new TextEncoder().encode('YourPassword')).then(h => console.log(Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('')))
+    const PASSWORD_HASH = 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3'; // Hash of: 123
+    
+    async function hashPassword(password) {
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
     
     function checkAuth() {
       const isAuthenticated = sessionStorage.getItem('droneAuthToken');
-      if (isAuthenticated === 'verified') {
+      if (isAuthenticated === PASSWORD_HASH) {
         document.getElementById('loginOverlay').classList.add('hidden');
         return true;
       }
       return false;
     }
 
-    function handleLogin() {
+    async function handleLogin() {
       const password = document.getElementById('passwordInput').value;
       const errorDiv = document.getElementById('loginError');
       
-      if (password === CORRECT_PASSWORD) {
-        sessionStorage.setItem('droneAuthToken', 'verified');
+      const hash = await hashPassword(password);
+      
+      if (hash === PASSWORD_HASH) {
+        sessionStorage.setItem('droneAuthToken', PASSWORD_HASH);
         document.getElementById('loginOverlay').classList.add('hidden');
         errorDiv.style.display = 'none';
         // Initialize map after successful login
