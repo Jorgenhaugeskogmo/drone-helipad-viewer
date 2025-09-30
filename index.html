@@ -188,7 +188,7 @@
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
     const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
@@ -197,6 +197,11 @@
     let currentBase = 'osm';
     baseOsm.addTo(map);
     L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
+    
+    // Initialize map screenshoter for high-quality PNG export
+    const screenshoter = new SimpleMapScreenshoter({
+      hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
+    }).addTo(map);
 
     let poi = [];
     let drones = [];
@@ -444,13 +449,25 @@
       a.click();
     });
 
-    document.getElementById('exportPngBtn').addEventListener('click', ()=>{
-      html2canvas(document.getElementById('map')).then(canvas => {
+    document.getElementById('exportPngBtn').addEventListener('click', async ()=>{
+      try {
+        const format = 'png';
+        const overridedPluginOptions = {
+          mimeType: 'image/png',
+          caption: null,
+          hideElementsWithSelectors: ['.leaflet-control-container']
+        };
+        const image = await screenshoter.takeScreen(format, overridedPluginOptions);
+        
+        // Download the image
         const link = document.createElement('a');
-        link.download = 'map.png';
-        link.href = canvas.toDataURL();
+        link.download = `kart-${new Date().toISOString().slice(0,10)}.png`;
+        link.href = image.blob ? URL.createObjectURL(image.blob) : image.image;
         link.click();
-      });
+      } catch(err) {
+        console.error('Feil ved eksport:', err);
+        alert('Kunne ikke eksportere kart. Prøv igjen.');
+      }
     });
 
     // Opacity slider
