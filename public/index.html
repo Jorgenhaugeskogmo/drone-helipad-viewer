@@ -63,9 +63,26 @@
       .grid.collapsed{grid-template-columns:1fr}
       #map{height:520px}
     }
+    /* Login overlay */
+    #loginOverlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#0b0f14;z-index:9999;display:flex;align-items:center;justify-content:center}
+    #loginBox{background:var(--card);border:1px solid #1e2936;border-radius:14px;padding:32px;max-width:400px;width:90%}
+    #loginBox h2{margin:0 0 8px;font-size:24px}
+    #loginBox p{color:var(--muted);margin:0 0 24px}
+    #loginBox input[type=password]{width:100%;margin-bottom:16px}
+    #loginError{color:#ff5a5a;font-size:13px;margin-top:8px;display:none}
+    .hidden{display:none!important}
   </style>
 </head>
 <body>
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>🔐 Innlogging kreves</h2>
+      <p>Skriv inn passord for å få tilgang til Drone Helipad Viewer</p>
+      <input type="password" id="passwordInput" placeholder="Passord" autocomplete="off" />
+      <button class="primary" id="loginBtn" style="width:100%">Logg inn</button>
+      <div id="loginError">❌ Feil passord. Prøv igjen.</div>
+    </div>
+  </div>
   <header>
     <div class="wrap">
       <h1>Drone vs Helipad – Interaktiv oversikt</h1>
@@ -190,18 +207,60 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
   <script>
-    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
-    const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
-    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
-    const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
-    let currentBase = 'osm';
-    baseOsm.addTo(map);
-    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
+    // Password protection
+    const CORRECT_PASSWORD = 'Helipad2024!'; // ENDRE DETTE TIL DITT EGET PASSORD
     
-    // Initialize map screenshoter for high-quality PNG export
-    const screenshoter = new SimpleMapScreenshoter({
-      hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
-    }).addTo(map);
+    function checkAuth() {
+      const isAuthenticated = sessionStorage.getItem('droneAuthToken');
+      if (isAuthenticated === 'verified') {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        return true;
+      }
+      return false;
+    }
+
+    function handleLogin() {
+      const password = document.getElementById('passwordInput').value;
+      const errorDiv = document.getElementById('loginError');
+      
+      if (password === CORRECT_PASSWORD) {
+        sessionStorage.setItem('droneAuthToken', 'verified');
+        document.getElementById('loginOverlay').classList.add('hidden');
+        errorDiv.style.display = 'none';
+        // Initialize map after successful login
+        initializeApp();
+      } else {
+        errorDiv.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    // Check auth on page load
+    const isAuth = checkAuth();
+    
+    // Only initialize map if authenticated
+    let map, baseOsm, baseEsri, baseEOX, screenshoter, currentBase;
+    
+    function initializeApp() {
+      if (!map) {
+        map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
+        baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
+        baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
+        baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
+        currentBase = 'osm';
+        baseOsm.addTo(map);
+        L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
+        
+        // Initialize map screenshoter for high-quality PNG export
+        screenshoter = new SimpleMapScreenshoter({
+          hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
+        }).addTo(map);
 
     let poi = [];
     let drones = [];
@@ -679,6 +738,13 @@
     });
     document.getElementById('heatOpacity').addEventListener('change', updateUrl);
     document.getElementById('basemapSelect').addEventListener('change', updateUrl);
+      }
+    }
+    
+    // Initialize app if already authenticated
+    if (isAuth) {
+      initializeApp();
+    }
   </script>
 </body>
 </html>
