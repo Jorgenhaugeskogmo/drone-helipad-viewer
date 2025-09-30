@@ -540,9 +540,9 @@
         [poiData, drData] = await Promise.all([loadCsv(poiFile), loadCsv(droneFile)]);
       }
 
-      poi = poiData.map(r=>({ name: r.name || r.POI || r.Navn || r.navn || r.site || r.base || 'POI', lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng) })).filter(p=> Number.isFinite(p.lat) && Number.isFinite(p.lon));
+      poi = poiData.map(r=>({ name: r.name || r.POI || r.Navn || r.navn || r.site || r.base || 'POI', lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng) })).filter(p=> Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat >= 55 && p.lat <= 72 && p.lon >= -5 && p.lon <= 35);
 
-      drones = drData.map(r=>({ lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng), start: parseDateSafe(r.start ?? r.Fra ?? r.from ?? r.Start ?? r['start_time'] ?? r.timestamp) })).filter(d=> Number.isFinite(d.lat) && Number.isFinite(d.lon));
+      drones = drData.map(r=>({ lat: Number(r.lat ?? r.latitude ?? r.Lat ?? r.Latitude), lon: Number(r.lon ?? r.long ?? r.lng ?? r.Long ?? r.Lng), start: parseDateSafe(r.start ?? r.Fra ?? r.from ?? r.Start ?? r['start_time'] ?? r.timestamp) })).filter(d=> Number.isFinite(d.lat) && Number.isFinite(d.lon) && d.lat >= 55 && d.lat <= 72 && d.lon >= -5 && d.lon <= 35);
 
       drawMap(r1,r2,r3, df, dt);
       const rows = buildSummary(r1,r2,r3, df, dt);
