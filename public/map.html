@@ -22,7 +22,8 @@
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 9);
     const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
-    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
+    const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
     let currentBase = 'osm';
     baseOsm.addTo(map);
     const basemapToggle = document.getElementById('basemapToggle');
@@ -30,9 +31,14 @@
     updateToggleLabel();
     basemapToggle.addEventListener('click', ()=>{
       if(currentBase === 'osm'){
-        map.removeLayer(baseOsm); baseEsri.addTo(map); currentBase = 'esri';
-      } else {
+        map.removeLayer(baseOsm);
+        baseEsri.addTo(map); currentBase = 'esri';
+        // fallback: if any tile errors, switch to EOX
+        baseEsri.once('tileerror', ()=>{ [baseEsri].forEach(l=> map.removeLayer(l)); baseEOX.addTo(map); currentBase = 'eox'; updateToggleLabel(); });
+      } else if(currentBase === 'esri'){
         map.removeLayer(baseEsri); baseOsm.addTo(map); currentBase = 'osm';
+      } else if(currentBase === 'eox'){
+        map.removeLayer(baseEOX); baseOsm.addTo(map); currentBase = 'osm';
       }
       updateToggleLabel();
     });

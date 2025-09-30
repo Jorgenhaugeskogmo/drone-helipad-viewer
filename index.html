@@ -16,7 +16,8 @@
     .wrap{max-width:1200px;margin:0 auto;padding:14px 18px}
     h1{margin:0;font-size:20px;letter-spacing:.2px}
     .sub{color:var(--muted);font-size:12px}
-    .grid{display:grid;grid-template-columns:360px 1fr;gap:14px;max-width:1200px;margin:12px auto;padding:0 18px}
+    .grid{display:grid;grid-template-columns:320px 1fr;gap:14px;max-width:1400px;margin:12px auto;padding:0 18px}
+    .grid.collapsed{grid-template-columns:48px 1fr}
     .card{background:var(--card);border:1px solid #1e2936;border-radius:14px}
     .card h2{margin:0;padding:14px 14px 8px;font-size:16px;border-bottom:1px solid #1e2936}
     .card .body{padding:12px 14px}
@@ -53,8 +54,13 @@
     .ops-box .ops-list{padding:10px 10px}
     .ops-item{padding:8px;border:1px solid #1e2936;border-radius:10px;margin-bottom:8px;background:#0b1420}
     .ops-item small{color:#9fb0c3}
+    #controls.collapsed .body{display:none}
+    #controls.collapsed h2{writing-mode:vertical-rl;text-orientation:mixed;padding:14px 8px;border:none;cursor:pointer;user-select:none}
+    #collapseBtn{position:absolute;top:8px;right:8px;background:transparent;border:1px solid #273547;color:#9fb0c3;padding:4px 8px;font-size:11px;border-radius:6px;cursor:pointer}
+    #collapseBtn:hover{background:#0f1620;color:#cfe6ff}
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr}
+      .grid.collapsed{grid-template-columns:1fr}
       #map{height:520px}
     }
   </style>
@@ -67,8 +73,9 @@
     </div>
   </header>
 
-  <main class="grid">
-    <section class="card" id="controls">
+  <main class="grid" id="mainGrid">
+    <section class="card" id="controls" style="position:relative">
+      <button id="collapseBtn" title="Skjul/vis panel">◀</button>
       <h2>1) Data</h2>
       <div class="body">
         <div class="row">
@@ -124,6 +131,7 @@
         <select id="basemapSelect">
           <option value="osm">Kart (OSM)</option>
           <option value="esri">Satellitt (Esri)</option>
+          <option value="eox">Satellitt (EOX)</option>
         </select>
       </div>
         <div class="legend" style="margin-top:10px">
@@ -184,10 +192,11 @@
   <script>
     const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
     const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
-    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
+    const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
     let currentBase = 'osm';
     baseOsm.addTo(map);
-    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri }, {}, { position: 'topleft' }).addTo(map);
+    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
 
     let poi = [];
     let drones = [];
@@ -454,14 +463,16 @@
     if(basemapSelect){
       basemapSelect.addEventListener('change', (e)=>{
         const v = e.target.value;
-        if(v === 'osm' && currentBase !== 'osm'){
-          map.removeLayer(baseEsri);
-          baseOsm.addTo(map);
-          currentBase = 'osm';
-        } else if(v === 'esri' && currentBase !== 'esri'){
-          map.removeLayer(baseOsm);
-          baseEsri.addTo(map);
-          currentBase = 'esri';
+        // remove others
+        [baseOsm, baseEsri, baseEOX].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+        if(v === 'osm'){
+          baseOsm.addTo(map); currentBase = 'osm';
+        } else if(v === 'esri'){
+          // try esri, fallback to eox on error
+          baseEsri.addTo(map); currentBase = 'esri';
+          baseEsri.once('tileerror', ()=>{ [baseEsri].forEach(l=> map.removeLayer(l)); baseEOX.addTo(map); currentBase = 'eox'; basemapSelect.value = 'eox'; });
+        } else if(v === 'eox'){
+          baseEOX.addTo(map); currentBase = 'eox';
         }
       });
     }
@@ -519,11 +530,116 @@
       renderSummaryTable(rows);
     });
 
+    // Collapse toggle
+    const collapseBtn = document.getElementById('collapseBtn');
+    const controlsPanel = document.getElementById('controls');
+    const mainGrid = document.getElementById('mainGrid');
+    let isCollapsed = false;
+    collapseBtn.addEventListener('click', ()=>{
+      isCollapsed = !isCollapsed;
+      if(isCollapsed){
+        controlsPanel.classList.add('collapsed');
+        mainGrid.classList.add('collapsed');
+        collapseBtn.textContent = '▶';
+        collapseBtn.style.right = '50%';
+        collapseBtn.style.transform = 'translateX(50%)';
+      } else {
+        controlsPanel.classList.remove('collapsed');
+        mainGrid.classList.remove('collapsed');
+        collapseBtn.textContent = '◀';
+        collapseBtn.style.right = '8px';
+        collapseBtn.style.transform = 'none';
+      }
+      setTimeout(()=> map.invalidateSize(), 300);
+    });
+
+    // URL state management
+    function getUrlParams(){
+      const params = new URLSearchParams(window.location.search);
+      return {
+        r1: params.get('r1') ? parseFloat(params.get('r1')) : 1,
+        r2: params.get('r2') ? parseFloat(params.get('r2')) : 3,
+        r3: params.get('r3') ? parseFloat(params.get('r3')) : 5,
+        dateFrom: params.get('dateFrom') || '',
+        dateTo: params.get('dateTo') || '',
+        heatOpacity: params.get('heatOpacity') ? parseFloat(params.get('heatOpacity')) : 0.35,
+        basemap: params.get('basemap') || 'osm',
+        lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
+        lon: params.get('lon') ? parseFloat(params.get('lon')) : null,
+        zoom: params.get('zoom') ? parseInt(params.get('zoom')) : null
+      };
+    }
+
+    function updateUrl(){
+      const params = new URLSearchParams();
+      const r1 = document.getElementById('r1').value;
+      const r2 = document.getElementById('r2').value;
+      const r3 = document.getElementById('r3').value;
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const heatOp = document.getElementById('heatOpacity').value;
+      const basemap = document.getElementById('basemapSelect').value;
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+
+      if(r1 != '1') params.set('r1', r1);
+      if(r2 != '3') params.set('r2', r2);
+      if(r3 != '5') params.set('r3', r3);
+      if(dateFrom) params.set('dateFrom', dateFrom);
+      if(dateTo) params.set('dateTo', dateTo);
+      if(heatOp != '0.35') params.set('heatOpacity', heatOp);
+      if(basemap != 'osm') params.set('basemap', basemap);
+      params.set('lat', center.lat.toFixed(4));
+      params.set('lon', center.lng.toFixed(4));
+      params.set('zoom', zoom);
+
+      const newUrl = window.location.pathname + '?' + params.toString();
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Load from URL on init
+    const urlParams = getUrlParams();
+    document.getElementById('r1').value = urlParams.r1;
+    document.getElementById('r2').value = urlParams.r2;
+    document.getElementById('r3').value = urlParams.r3;
+    document.getElementById('dateFrom').value = urlParams.dateFrom;
+    document.getElementById('dateTo').value = urlParams.dateTo;
+    document.getElementById('heatOpacity').value = urlParams.heatOpacity;
+    document.getElementById('heatOpacityVal').textContent = urlParams.heatOpacity.toFixed(2);
+    heatMinOpacity = urlParams.heatOpacity;
+    document.getElementById('basemapSelect').value = urlParams.basemap;
+    
+    // Apply basemap from URL
+    if(urlParams.basemap !== 'osm'){
+      [baseOsm, baseEsri, baseEOX].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+      if(urlParams.basemap === 'esri'){ baseEsri.addTo(map); currentBase = 'esri'; }
+      else if(urlParams.basemap === 'eox'){ baseEOX.addTo(map); currentBase = 'eox'; }
+    }
+    
+    // Apply map position from URL
+    if(urlParams.lat && urlParams.lon && urlParams.zoom){
+      map.setView([urlParams.lat, urlParams.lon], urlParams.zoom);
+    }
+
     // Auto-run with built-in data on first load
-    window.addEventListener('load', ()=> document.getElementById('runBtn').click());
+    window.addEventListener('load', ()=> {
+      document.getElementById('runBtn').click();
+      // Update URL after initial load
+      setTimeout(updateUrl, 500);
+    });
 
     // Update viewport summary on pan/zoom
-    map.on('moveend zoomend', ()=> updateViewportSummary());
+    map.on('moveend zoomend', ()=> {
+      updateViewportSummary();
+      updateUrl();
+    });
+
+    // Update URL when params change
+    ['r1','r2','r3','dateFrom','dateTo'].forEach(id => {
+      document.getElementById(id).addEventListener('change', updateUrl);
+    });
+    document.getElementById('heatOpacity').addEventListener('change', updateUrl);
+    document.getElementById('basemapSelect').addEventListener('change', updateUrl);
   </script>
 </body>
 </html>
