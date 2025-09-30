@@ -205,8 +205,13 @@
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+  <script src="https://unpkg.com/leaflet-simple-map-screenshoter@0.1.5"></script>
   <script>
+    // Global variables
+    let poi = [];
+    let drones = [];
+    let heatMinOpacity = 0.35;
+    
     // Password protection - using SHA-256 hash for security
     // To generate a new hash, open browser console and run: 
     // crypto.subtle.digest('SHA-256', new TextEncoder().encode('YourPassword')).then(h => console.log(Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('')))
@@ -277,10 +282,6 @@
     const screenshoter = new SimpleMapScreenshoter({
       hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
     }).addTo(map);
-
-    let poi = [];
-    let drones = [];
-    let heatMinOpacity = 0.35;
 
     // Viewport summary control (top-right)
     const viewportSummaryControl = L.control({ position: 'topright' });
