@@ -1,6 +1,9 @@
-# Ignorer data i rotmappen (brukes kun lokalt)
-/data/
+# Ignorer metadata-filer
+._*
+.DS_Store
 
-# Men inkluder public/data (skal være med i repo)
-!public/data/
-!public/data/*.csv
+# Node modules
+node_modules/
+
+# Vercel
+.vercel/

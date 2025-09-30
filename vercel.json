@@ -1,6 +1,4 @@
 {
-  "buildCommand": "mkdir -p data && cp -r public/data/* data/",
-  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
