@@ -226,7 +226,7 @@
         // Auto-load data for already authenticated users
         window.addEventListener('load', () => {
           setTimeout(() => {
-            document.getElementById('runBtn').click();
+            runAnalysis();
             setTimeout(updateUrl, 500);
           }, 500);
         });
@@ -247,7 +247,7 @@
         errorDiv.style.display = 'none';
         // Auto-load data after successful login
         setTimeout(() => {
-          document.getElementById('runBtn').click();
+          runAnalysis();
           setTimeout(updateUrl, 500);
         }, 500);
       } else {
@@ -606,7 +606,7 @@
       window.open('/map.html', '_blank');
     });
 
-    document.getElementById('runBtn').addEventListener('click', async ()=>{
+    async function runAnalysis(){
       console.log('Kjør analyse-knapp klikket');
       const r1 = parseFloat((document.getElementById('r1')).value) || 1;
       const r2 = parseFloat((document.getElementById('r2')).value) || 3;
@@ -639,7 +639,9 @@
       drawMap(r1,r2,r3, df, dt);
       const rows = buildSummary(r1,r2,r3, df, dt);
       renderSummaryTable(rows);
-    });
+    }
+    
+    document.getElementById('runBtn').addEventListener('click', runAnalysis);
 
     // Collapse toggle
     const collapseBtn = document.getElementById('collapseBtn');
