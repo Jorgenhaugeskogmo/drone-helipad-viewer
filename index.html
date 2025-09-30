@@ -408,11 +408,26 @@
     }
 
     async function loadCsvFromUrl(url){
-      const res = await fetch(url);
-      const txt = await res.text();
-      return new Promise((resolve)=>{
-        Papa.parse(txt, { header:true, skipEmptyLines:true, dynamicTyping:true, complete: r => resolve(r.data) });
-      });
+      try {
+        console.log('Laster CSV fra:', url);
+        const res = await fetch(url);
+        if(!res.ok) {
+          console.error('Feil ved lasting av CSV:', res.status, res.statusText);
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const txt = await res.text();
+        console.log('CSV lastet, størrelse:', txt.length, 'bytes');
+        return new Promise((resolve)=>{
+          Papa.parse(txt, { header:true, skipEmptyLines:true, dynamicTyping:true, complete: r => {
+            console.log('CSV parsed, rader:', r.data.length);
+            resolve(r.data);
+          }});
+        });
+      } catch(err) {
+        console.error('Kritisk feil ved lasting av CSV:', err);
+        alert('Kunne ikke laste datafiler. Sjekk console for detaljer.');
+        throw err;
+      }
     }
 
     document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
@@ -500,6 +515,7 @@
     });
 
     document.getElementById('runBtn').addEventListener('click', async ()=>{
+      console.log('Kjør analyse-knapp klikket');
       const r1 = parseFloat((document.getElementById('r1')).value) || 1;
       const r2 = parseFloat((document.getElementById('r2')).value) || 3;
       const r3 = parseFloat((document.getElementById('r3')).value) || 5;
@@ -507,13 +523,16 @@
       const dt = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
 
       const useBuiltIn = (document.getElementById('useBuiltIn')).checked;
+      console.log('Bruk innebygde filer:', useBuiltIn);
       let poiData, drData;
 
       if(useBuiltIn){
+        console.log('Laster innebygde datafiler...');
         [poiData, drData] = await Promise.all([
           loadCsvFromUrl('/data/poi.csv'),
           loadCsvFromUrl('/data/drone_ops.csv')
         ]);
+        console.log('Datafiler lastet. POI:', poiData.length, 'Drone:', drData.length);
       } else {
         const poiFile = (document.getElementById('poiFile')).files[0];
         const droneFile = (document.getElementById('droneFile')).files[0];
