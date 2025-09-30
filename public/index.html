@@ -238,8 +238,6 @@
         sessionStorage.setItem('droneAuthToken', PASSWORD_HASH);
         document.getElementById('loginOverlay').classList.add('hidden');
         errorDiv.style.display = 'none';
-        // Initialize map after successful login
-        initializeApp();
       } else {
         errorDiv.style.display = 'block';
         document.getElementById('passwordInput').value = '';
@@ -253,25 +251,20 @@
     });
 
     // Check auth on page load
-    const isAuth = checkAuth();
+    checkAuth();
     
-    // Only initialize map if authenticated
-    let map, baseOsm, baseEsri, baseEOX, screenshoter, currentBase;
+    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
+    const baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
+    const baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
+    const baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
+    let currentBase = 'osm';
+    baseOsm.addTo(map);
+    L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
     
-    function initializeApp() {
-      if (!map) {
-        map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([61.836, 8.568], 8);
-        baseOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' });
-        baseEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '&copy; Esri — World Imagery', crossOrigin: true });
-        baseEOX = L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 18, attribution: 'EOX — Sentinel-2 cloudless 2020', crossOrigin: true });
-        currentBase = 'osm';
-        baseOsm.addTo(map);
-        L.control.layers({ 'Kart (OSM)': baseOsm, 'Satellitt (Esri)': baseEsri, 'Satellitt (EOX)': baseEOX }, {}, { position: 'topleft' }).addTo(map);
-        
-        // Initialize map screenshoter for high-quality PNG export
-        screenshoter = new SimpleMapScreenshoter({
-          hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
-        }).addTo(map);
+    // Initialize map screenshoter for high-quality PNG export
+    const screenshoter = new SimpleMapScreenshoter({
+      hideElementsWithSelectors: ['.leaflet-control-container', '.leaflet-top', '.leaflet-bottom']
+    }).addTo(map);
 
     let poi = [];
     let drones = [];
@@ -749,13 +742,6 @@
     });
     document.getElementById('heatOpacity').addEventListener('change', updateUrl);
     document.getElementById('basemapSelect').addEventListener('change', updateUrl);
-      }
-    }
-    
-    // Initialize app if already authenticated
-    if (isAuth) {
-      initializeApp();
-    }
   </script>
 </body>
 </html>
