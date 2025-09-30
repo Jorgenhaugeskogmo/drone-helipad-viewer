@@ -223,6 +223,13 @@
       const isAuthenticated = sessionStorage.getItem('droneAuthToken');
       if (isAuthenticated === PASSWORD_HASH) {
         document.getElementById('loginOverlay').classList.add('hidden');
+        // Auto-load data for already authenticated users
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            document.getElementById('runBtn').click();
+            setTimeout(updateUrl, 500);
+          }, 500);
+        });
         return true;
       }
       return false;
@@ -238,6 +245,11 @@
         sessionStorage.setItem('droneAuthToken', PASSWORD_HASH);
         document.getElementById('loginOverlay').classList.add('hidden');
         errorDiv.style.display = 'none';
+        // Auto-load data after successful login
+        setTimeout(() => {
+          document.getElementById('runBtn').click();
+          setTimeout(updateUrl, 500);
+        }, 500);
       } else {
         errorDiv.style.display = 'block';
         document.getElementById('passwordInput').value = '';
@@ -722,13 +734,6 @@
         map.setView([urlParams.lat, urlParams.lon], urlParams.zoom);
       }
     }
-
-    // Auto-run with built-in data on first load
-    window.addEventListener('load', ()=> {
-      document.getElementById('runBtn').click();
-      // Update URL after initial load
-      setTimeout(updateUrl, 500);
-    });
 
     // Update viewport summary on pan/zoom
     map.on('moveend zoomend', ()=> {
