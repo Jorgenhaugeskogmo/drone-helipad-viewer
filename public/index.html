@@ -635,9 +635,12 @@
       else if(urlParams.basemap === 'eox'){ baseEOX.addTo(map); currentBase = 'eox'; }
     }
     
-    // Apply map position from URL
+    // Apply map position from URL (only if valid Norway-ish coordinates)
     if(urlParams.lat && urlParams.lon && urlParams.zoom){
-      map.setView([urlParams.lat, urlParams.lon], urlParams.zoom);
+      // Only apply if coordinates seem reasonable for Norway/Scandinavia
+      if(urlParams.lat >= 55 && urlParams.lat <= 72 && urlParams.lon >= -5 && urlParams.lon <= 35){
+        map.setView([urlParams.lat, urlParams.lon], urlParams.zoom);
+      }
     }
 
     // Auto-run with built-in data on first load
