@@ -1,4 +1,6 @@
-data/
-.csv
-!public/data/.csv
+# Ignorer data i rotmappen (brukes kun lokalt)
+/data/
 
+# Men inkluder public/data (skal være med i repo)
+!public/data/
+!public/data/*.csv
